@@ -62,6 +62,17 @@
       margin: 0 auto;
       background: #222;
     }
+    .player-list {
+      margin-top: 20px;
+      text-align: left;
+      display: inline-block;
+    }
+    .player-list div {
+      padding: 5px;
+      margin: 5px;
+      background: #333;
+      border-radius: 5px;
+    }
   </style>
 </head>
 <body>
@@ -83,6 +94,8 @@
       <button onclick="createRoom()">Create Room</button>
       <button onclick="joinRoom()">Join Room</button>
     </div>
+    
+    <div id="player-list" class="player-list"></div>
   </div>
   
   <div id="game-container">
@@ -90,8 +103,8 @@
   </div>
   
   <script>
-    // Socket.io connection
-    const socket = io('http://localhost:3002');
+    // Socket.io connection (auto-connects to the same domain)
+    const socket = io();
     let currentRoomId = null;
     let playerClass = 'warrior';
     
@@ -99,11 +112,13 @@
     socket.on('connect', () => {
       document.getElementById('status').textContent = '✅ Connected to server!';
       document.getElementById('status').className = 'status connected';
+      console.log('Connected to Socket.io server!');
     });
     
     socket.on('connect_error', (e) => {
       document.getElementById('status').textContent = '❌ Connection failed: ' + e.message;
       document.getElementById('status').className = 'status disconnected';
+      console.error('Connection error:', e);
     });
     
     socket.on('disconnect', () => {
@@ -116,11 +131,27 @@
       currentRoomId = data.roomId;
       document.getElementById('room-id').value = data.roomId;
       document.getElementById('status').textContent = 'Room created! ID: ' + data.roomId;
+      document.getElementById('status').className = 'status connected';
     });
     
     socket.on('roomJoined', (data) => {
       currentRoomId = data.roomId;
       document.getElementById('status').textContent = 'Joined room: ' + data.roomId;
+      document.getElementById('status').className = 'status connected';
+    });
+    
+    socket.on('playerJoined', (data) => {
+      const playerList = document.getElementById('player-list');
+      const playerDiv = document.createElement('div');
+      playerDiv.textContent = 'Player joined: ' + data.playerId.substring(0, 8) + ' (' + data.playerClass + ')';
+      playerList.appendChild(playerDiv);
+    });
+    
+    socket.on('playerLeft', (data) => {
+      const playerList = document.getElementById('player-list');
+      const playerDiv = document.createElement('div');
+      playerDiv.textContent = 'Player left: ' + data.playerId.substring(0, 8);
+      playerList.appendChild(playerDiv);
     });
     
     socket.on('error', (data) => {
@@ -131,6 +162,7 @@
     function selectClass(className) {
       playerClass = className;
       document.getElementById('status').textContent = 'Selected: ' + className;
+      document.getElementById('status').className = 'status connected';
     }
     
     // Create a new room

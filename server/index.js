@@ -25,7 +25,7 @@ app.get('/', (req, res) => {
 
 // Test route
 app.get('/test', (req, res) => {
-  res.send('Server is running! Open http://localhost:3002 to play.');
+  res.send('Server is running! Open the main page to play.');
 });
 
 // Store all active rooms
@@ -97,9 +97,8 @@ io.on('connection', (socket) => {
   });
 });
 
-// Start the server
+// Start the server on Render's dynamic port
 const PORT = process.env.PORT || 3002;
 server.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-  console.log(`Open your browser and navigate to http://localhost:${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
