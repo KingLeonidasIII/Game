@@ -8,7 +8,7 @@ const DungeonRoom = require('./rooms/DungeonRoom');
 const app = express();
 const server = http.createServer(app);
 
-// Configure Socket.io for Render (auto-handles CORS)
+// Configure Socket.io for Render
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -24,11 +24,6 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// Test route
-app.get('/test', (req, res) => {
-  res.send('Server is running! Open the main page to play.');
-});
-
 // Store all active dungeon rooms
 const rooms = {};
 
@@ -36,8 +31,9 @@ const rooms = {};
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  // Create or join a room
+  // Create a new room
   socket.on('createRoom', () => {
+    console.log(`Creating room for ${socket.id}`);
     const roomId = uuidv4();
     const room = new DungeonRoom(roomId, io);
     rooms[roomId] = room;
@@ -46,17 +42,20 @@ io.on('connection', (socket) => {
     console.log(`Room created: ${roomId}`);
   });
 
+  // Join an existing room
   socket.on('joinRoom', (data) => {
+    console.log(`Joining room: ${data.roomId} for ${socket.id}`);
     const { roomId, playerClass } = data;
     const room = rooms[roomId];
     
     if (!room) {
-      socket.emit('error', { message: 'Room not found' });
+      console.log(`Room ${roomId} not found`);
+      socket.emit('error', { message: 'Room not found. Create a new room first.' });
       return;
     }
 
     if (room.isFull()) {
-      socket.emit('error', { message: 'Room is full' });
+      socket.emit('error', { message: 'Room is full (max 4 players).' });
       return;
     }
 
@@ -65,6 +64,7 @@ io.on('connection', (socket) => {
     console.log(`User ${socket.id} joined room ${roomId}`);
   });
 
+  // Leave a room
   socket.on('leaveRoom', (data) => {
     const { roomId } = data;
     const room = rooms[roomId];
