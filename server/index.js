@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const { v4: uuidv4 } = require('uuid');
+const path = require('path');
 const DungeonRoom = require('./rooms/DungeonRoom');
 
 const app = express();
@@ -14,7 +15,12 @@ const io = new Server(server, {
 });
 
 // Serve static files from public/
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Handle root route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
 
 // Store all active dungeon rooms
 const rooms = {};
@@ -110,7 +116,6 @@ io.on('connection', (socket) => {
   // Handle disconnection
   socket.on('disconnect', () => {
     console.log(`User disconnected: ${socket.id}`);
-    // Find and remove the player from all rooms
     for (const roomId in rooms) {
       const room = rooms[roomId];
       if (room.players[socket.id]) {
