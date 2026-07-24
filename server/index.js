@@ -7,6 +7,8 @@ const DungeonRoom = require('./rooms/DungeonRoom');
 
 const app = express();
 const server = http.createServer(app);
+
+// Configure Socket.io with CORS
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -14,10 +16,10 @@ const io = new Server(server, {
   }
 });
 
-// Serve static files from public/
+// Serve static files from the public directory
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Handle root route
+// Handle requests to the root URL
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
@@ -29,7 +31,7 @@ const rooms = {};
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  // Create or join a room
+  // Create a new room
   socket.on('createRoom', () => {
     const roomId = uuidv4();
     const room = new DungeonRoom(roomId, io);
@@ -39,6 +41,7 @@ io.on('connection', (socket) => {
     console.log(`Room created: ${roomId}`);
   });
 
+  // Join an existing room
   socket.on('joinRoom', (data) => {
     const { roomId, playerClass } = data;
     const room = rooms[roomId];
@@ -58,6 +61,7 @@ io.on('connection', (socket) => {
     console.log(`User ${socket.id} joined room ${roomId}`);
   });
 
+  // Leave a room
   socket.on('leaveRoom', (data) => {
     const { roomId } = data;
     const room = rooms[roomId];
@@ -71,7 +75,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle player input
+  // Handle player movement
   socket.on('playerMovement', (data) => {
     const { roomId, x, y, direction } = data;
     const room = rooms[roomId];
@@ -80,6 +84,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle player attacks
   socket.on('playerAttack', (data) => {
     const { roomId, targetId, ability } = data;
     const room = rooms[roomId];
@@ -88,6 +93,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle item usage
   socket.on('playerUseItem', (data) => {
     const { roomId, itemId } = data;
     const room = rooms[roomId];
@@ -96,6 +102,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle loot pickup
   socket.on('playerPickupLoot', (data) => {
     const { roomId, lootId } = data;
     const room = rooms[roomId];
@@ -130,8 +137,9 @@ io.on('connection', (socket) => {
   });
 });
 
-// Start the server
+// Start the server on port 3002
 const PORT = process.env.PORT || 3002;
 server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Open your browser and navigate to http://localhost:${PORT}`);
 });

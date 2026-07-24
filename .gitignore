@@ -11,8 +11,3 @@ yarn-error.log*
 .vscode/
 *.swp
 *.swo
-
-# Build output
-public/
-!public/index.html
-!public/game.js
