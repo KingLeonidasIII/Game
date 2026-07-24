@@ -3,12 +3,11 @@ const http = require('http');
 const { Server } = require('socket.io');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
-const DungeonRoom = require('./rooms/DungeonRoom');
 
 const app = express();
 const server = http.createServer(app);
 
-// Configure Socket.io with CORS
+// Configure Socket.io
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -16,130 +15,31 @@ const io = new Server(server, {
   }
 });
 
-// Serve static files from the public directory
+// Serve static files from public/
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Handle requests to the root URL
+// Handle root route
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// Store all active dungeon rooms
-const rooms = {};
-
-// Socket.io connection handler
-io.on('connection', (socket) => {
-  console.log(`User connected: ${socket.id}`);
-
-  // Create a new room
-  socket.on('createRoom', () => {
-    const roomId = uuidv4();
-    const room = new DungeonRoom(roomId, io);
-    rooms[roomId] = room;
-    room.addPlayer(socket.id, socket);
-    socket.emit('roomCreated', { roomId });
-    console.log(`Room created: ${roomId}`);
-  });
-
-  // Join an existing room
-  socket.on('joinRoom', (data) => {
-    const { roomId, playerClass } = data;
-    const room = rooms[roomId];
-    
-    if (!room) {
-      socket.emit('error', { message: 'Room not found' });
-      return;
-    }
-
-    if (room.isFull()) {
-      socket.emit('error', { message: 'Room is full' });
-      return;
-    }
-
-    room.addPlayer(socket.id, socket, playerClass);
-    socket.emit('roomJoined', { roomId, playerId: socket.id });
-    console.log(`User ${socket.id} joined room ${roomId}`);
-  });
-
-  // Leave a room
-  socket.on('leaveRoom', (data) => {
-    const { roomId } = data;
-    const room = rooms[roomId];
-    
-    if (room) {
-      room.removePlayer(socket.id);
-      if (room.isEmpty()) {
-        delete rooms[roomId];
-        console.log(`Room ${roomId} deleted (empty)`);
-      }
-    }
-  });
-
-  // Handle player movement
-  socket.on('playerMovement', (data) => {
-    const { roomId, x, y, direction } = data;
-    const room = rooms[roomId];
-    if (room) {
-      room.handlePlayerMovement(socket.id, { x, y, direction });
-    }
-  });
-
-  // Handle player attacks
-  socket.on('playerAttack', (data) => {
-    const { roomId, targetId, ability } = data;
-    const room = rooms[roomId];
-    if (room) {
-      room.handlePlayerAttack(socket.id, { targetId, ability });
-    }
-  });
-
-  // Handle item usage
-  socket.on('playerUseItem', (data) => {
-    const { roomId, itemId } = data;
-    const room = rooms[roomId];
-    if (room) {
-      room.handlePlayerUseItem(socket.id, { itemId });
-    }
-  });
-
-  // Handle loot pickup
-  socket.on('playerPickupLoot', (data) => {
-    const { roomId, lootId } = data;
-    const room = rooms[roomId];
-    if (room) {
-      room.handlePlayerPickupLoot(socket.id, { lootId });
-    }
-  });
-
-  // Handle chat messages
-  socket.on('chatMessage', (data) => {
-    const { roomId, message } = data;
-    const room = rooms[roomId];
-    if (room) {
-      io.to(roomId).emit('chatMessage', { playerId: socket.id, message });
-    }
-  });
-
-  // Handle disconnection
-  socket.on('disconnect', () => {
-    console.log(`User disconnected: ${socket.id}`);
-    for (const roomId in rooms) {
-      const room = rooms[roomId];
-      if (room.players[socket.id]) {
-        room.removePlayer(socket.id);
-        if (room.isEmpty()) {
-          delete rooms[roomId];
-          console.log(`Room ${roomId} deleted (empty)`);
-        }
-        break;
-      }
-    }
-  });
+// Test route to verify server is running
+app.get('/test', (req, res) => {
+  res.send('Server is running! Open http://localhost:3002 to play.');
 });
 
-// Start the server on port 3002
+// Start the server
 const PORT = process.env.PORT || 3002;
 server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
-  console.log(`Open your browser and navigate to http://localhost:${PORT}`);
+  console.log(`Test it: http://localhost:${PORT}/test`);
+});
+
+// Socket.io logic (simplified for now to ensure connection works)
+io.on('connection', (socket) => {
+  console.log(`User connected: ${socket.id}`);
+  
+  socket.on('disconnect', () => {
+    console.log(`User disconnected: ${socket.id}`);
+  });
 });
