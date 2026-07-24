@@ -7,54 +7,145 @@
   <style>
     body {
       margin: 0;
-      padding: 0;
-      background: #000;
+      padding: 20px;
+      background: #111;
       color: #fff;
       font-family: Arial, sans-serif;
-    }
-    #lobby {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
       text-align: center;
     }
+    h1 {
+      color: #ff0;
+    }
+    .status {
+      font-size: 20px;
+      margin: 20px;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .connected {
+      background: #0f0;
+      color: #000;
+    }
+    .disconnected {
+      background: #f00;
+      color: #fff;
+    }
     button {
-      padding: 10px 20px;
-      margin: 5px;
+      padding: 12px 24px;
+      margin: 10px;
+      font-size: 16px;
       cursor: pointer;
+      background: #444;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+    }
+    button:hover {
+      background: #666;
+    }
+    #room-id {
+      padding: 8px;
+      font-size: 16px;
+      width: 200px;
+      background: #333;
+      color: #fff;
+      border: 1px solid #555;
+      border-radius: 5px;
+    }
+    #game-container {
+      display: none;
+      margin-top: 20px;
+    }
+    #game {
+      width: 800px;
+      height: 600px;
+      margin: 0 auto;
+      background: #222;
     }
   </style>
 </head>
 <body>
+  <h1>Co-op Dungeon Crawler</h1>
+  
+  <div id="status" class="status disconnected">
+    Connecting to server...
+  </div>
+  
   <div id="lobby">
-    <h1>Co-op Dungeon Crawler</h1>
-    <p>Server is working! Open console to see Socket.io connection.</p>
-    <button onclick="createRoom()">Create Room</button>
-    <button onclick="joinRoom()">Join Room</button>
+    <p>Select your class:</p>
+    <button onclick="selectClass('warrior')">Warrior</button>
+    <button onclick="selectClass('mage')">Mage</button>
+    <button onclick="selectClass('rogue')">Rogue</button>
+    
+    <div style="margin-top: 20px;">
+      <input type="text" id="room-id" placeholder="Room ID (leave blank to create)">
+      <br>
+      <button onclick="createRoom()">Create Room</button>
+      <button onclick="joinRoom()">Join Room</button>
+    </div>
+  </div>
+  
+  <div id="game-container">
+    <div id="game"></div>
   </div>
   
   <script>
+    // Socket.io connection
     const socket = io('http://localhost:3002');
+    let currentRoomId = null;
+    let playerClass = 'warrior';
     
+    // Update connection status on the page
     socket.on('connect', () => {
-      console.log('✅ Connected to Socket.io server!');
-      document.body.innerHTML += '<p style="color: green;">Socket.io connected! Open console for details.</p>';
+      document.getElementById('status').textContent = '✅ Connected to server!';
+      document.getElementById('status').className = 'status connected';
     });
     
     socket.on('connect_error', (e) => {
-      console.error('❌ Socket.io connection error:', e);
-      document.body.innerHTML += '<p style="color: red;">Socket.io error: ' + e.message + '</p>';
+      document.getElementById('status').textContent = '❌ Connection failed: ' + e.message;
+      document.getElementById('status').className = 'status disconnected';
     });
     
-    function createRoom() {
-      socket.emit('createRoom');
-      console.log('Creating room...');
+    socket.on('disconnect', () => {
+      document.getElementById('status').textContent = '⚠️ Disconnected from server';
+      document.getElementById('status').className = 'status disconnected';
+    });
+    
+    // Room events
+    socket.on('roomCreated', (data) => {
+      currentRoomId = data.roomId;
+      document.getElementById('room-id').value = data.roomId;
+      document.getElementById('status').textContent = 'Room created! ID: ' + data.roomId;
+    });
+    
+    socket.on('roomJoined', (data) => {
+      currentRoomId = data.roomId;
+      document.getElementById('status').textContent = 'Joined room: ' + data.roomId;
+    });
+    
+    socket.on('error', (data) => {
+      alert('Error: ' + data.message);
+    });
+    
+    // Class selection
+    function selectClass(className) {
+      playerClass = className;
+      document.getElementById('status').textContent = 'Selected: ' + className;
     }
     
+    // Create a new room
+    function createRoom() {
+      socket.emit('createRoom');
+    }
+    
+    // Join an existing room
     function joinRoom() {
-      const roomId = prompt('Enter Room ID:');
-      if (roomId) socket.emit('joinRoom', { roomId, playerClass: 'warrior' });
+      const roomId = document.getElementById('room-id').value;
+      if (!roomId) {
+        alert('Please enter a Room ID or create a new room.');
+        return;
+      }
+      socket.emit('joinRoom', { roomId: roomId, playerClass: playerClass });
     }
   </script>
 </body>
