@@ -3,11 +3,12 @@ const http = require('http');
 const { Server } = require('socket.io');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const DungeonRoom = require('./rooms/DungeonRoom');
 
 const app = express();
 const server = http.createServer(app);
 
-// Configure Socket.io
+// Configure Socket.io for Render (auto-handles CORS)
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -28,66 +29,105 @@ app.get('/test', (req, res) => {
   res.send('Server is running! Open the main page to play.');
 });
 
-// Store all active rooms
+// Store all active dungeon rooms
 const rooms = {};
 
 // Socket.io connection handler
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
-  
-  // Create a new room
+
+  // Create or join a room
   socket.on('createRoom', () => {
     const roomId = uuidv4();
-    rooms[roomId] = {
-      id: roomId,
-      players: [socket.id]
-    };
-    socket.join(roomId);
+    const room = new DungeonRoom(roomId, io);
+    rooms[roomId] = room;
+    room.addPlayer(socket.id, socket);
     socket.emit('roomCreated', { roomId });
     console.log(`Room created: ${roomId}`);
   });
-  
-  // Join an existing room
+
   socket.on('joinRoom', (data) => {
     const { roomId, playerClass } = data;
     const room = rooms[roomId];
     
     if (!room) {
-      socket.emit('error', { message: 'Room not found. Create a new room first.' });
+      socket.emit('error', { message: 'Room not found' });
       return;
     }
-    
-    if (room.players.length >= 4) {
-      socket.emit('error', { message: 'Room is full (max 4 players).' });
+
+    if (room.isFull()) {
+      socket.emit('error', { message: 'Room is full' });
       return;
     }
-    
-    room.players.push(socket.id);
-    socket.join(roomId);
+
+    room.addPlayer(socket.id, socket, playerClass);
     socket.emit('roomJoined', { roomId, playerId: socket.id });
-    
-    // Notify other players in the room
-    io.to(roomId).emit('playerJoined', {
-      playerId: socket.id,
-      playerClass: playerClass
-    });
-    
     console.log(`User ${socket.id} joined room ${roomId}`);
   });
-  
+
+  socket.on('leaveRoom', (data) => {
+    const { roomId } = data;
+    const room = rooms[roomId];
+    
+    if (room) {
+      room.removePlayer(socket.id);
+      if (room.isEmpty()) {
+        delete rooms[roomId];
+        console.log(`Room ${roomId} deleted (empty)`);
+      }
+    }
+  });
+
+  // Handle player input
+  socket.on('playerMovement', (data) => {
+    const { roomId, x, y, direction } = data;
+    const room = rooms[roomId];
+    if (room) {
+      room.handlePlayerMovement(socket.id, { x, y, direction });
+    }
+  });
+
+  socket.on('playerAttack', (data) => {
+    const { roomId, targetId, ability } = data;
+    const room = rooms[roomId];
+    if (room) {
+      room.handlePlayerAttack(socket.id, { targetId, ability });
+    }
+  });
+
+  socket.on('playerUseItem', (data) => {
+    const { roomId, itemId } = data;
+    const room = rooms[roomId];
+    if (room) {
+      room.handlePlayerUseItem(socket.id, { itemId });
+    }
+  });
+
+  socket.on('playerPickupLoot', (data) => {
+    const { roomId, lootId } = data;
+    const room = rooms[roomId];
+    if (room) {
+      room.handlePlayerPickupLoot(socket.id, { lootId });
+    }
+  });
+
+  // Handle chat messages
+  socket.on('chatMessage', (data) => {
+    const { roomId, message } = data;
+    const room = rooms[roomId];
+    if (room) {
+      io.to(roomId).emit('chatMessage', { playerId: socket.id, message });
+    }
+  });
+
   // Handle disconnection
   socket.on('disconnect', () => {
     console.log(`User disconnected: ${socket.id}`);
-    // Remove player from all rooms
     for (const roomId in rooms) {
       const room = rooms[roomId];
-      const index = room.players.indexOf(socket.id);
-      if (index !== -1) {
-        room.players.splice(index, 1);
-        io.to(roomId).emit('playerLeft', { playerId: socket.id });
-        
-        // Delete room if empty
-        if (room.players.length === 0) {
+      if (room.players[socket.id]) {
+        room.removePlayer(socket.id);
+        if (room.isEmpty()) {
           delete rooms[roomId];
           console.log(`Room ${roomId} deleted (empty)`);
         }

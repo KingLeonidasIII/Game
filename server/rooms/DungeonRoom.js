@@ -92,7 +92,7 @@ class DungeonRoom {
     socket.join(this.roomId);
 
     // Start the game if enough players
-    if (this.gameState === 'lobby' && Object.keys(this.players).length >= 2) {
+    if (this.gameState === 'lobby' && Object.keys(this.players).length >= 1) {
       this.startGame();
     }
 

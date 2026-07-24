@@ -1,184 +1,291 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Co-op Dungeon Crawler</title>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <style>
     body {
       margin: 0;
-      padding: 20px;
-      background: #111;
+      padding: 0;
+      background-color: #111;
       color: #fff;
-      font-family: Arial, sans-serif;
-      text-align: center;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
     }
-    h1 {
+    
+    #game-container {
+      display: flex;
+      height: 100vh;
+    }
+    
+    #game {
+      flex: 1;
+    }
+    
+    #ui-panel {
+      width: 250px;
+      background-color: #222;
+      padding: 10px;
+      overflow-y: auto;
+    }
+    
+    #lobby {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: #222;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      z-index: 100;
+    }
+    
+    #lobby h1 {
+      margin-top: 0;
       color: #ff0;
     }
-    .status {
-      font-size: 20px;
-      margin: 20px;
-      padding: 10px;
-      border-radius: 5px;
-    }
-    .connected {
-      background: #0f0;
-      color: #000;
-    }
-    .disconnected {
-      background: #f00;
-      color: #fff;
-    }
-    button {
-      padding: 12px 24px;
-      margin: 10px;
-      font-size: 16px;
-      cursor: pointer;
-      background: #444;
+    
+    #lobby button {
+      background-color: #444;
       color: #fff;
       border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
       border-radius: 5px;
     }
-    button:hover {
-      background: #666;
+    
+    #lobby button:hover {
+      background-color: #555;
     }
-    #room-id {
+    
+    #lobby input {
       padding: 8px;
-      font-size: 16px;
+      margin: 5px;
       width: 200px;
-      background: #333;
+      background-color: #333;
       color: #fff;
-      border: 1px solid #555;
+      border: 1px solid #444;
       border-radius: 5px;
     }
-    #game-container {
-      display: none;
+    
+    #class-select {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 20px 0;
+    }
+    
+    .class-option {
+      background-color: #333;
+      padding: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      border: 2px solid #444;
+    }
+    
+    .class-option:hover {
+      background-color: #444;
+    }
+    
+    .class-option.selected {
+      border-color: #0f0;
+    }
+    
+    #player-list {
       margin-top: 20px;
     }
-    #game {
-      width: 800px;
-      height: 600px;
-      margin: 0 auto;
-      background: #222;
-    }
-    .player-list {
-      margin-top: 20px;
-      text-align: left;
-      display: inline-block;
-    }
-    .player-list div {
+    
+    #player-list div {
       padding: 5px;
       margin: 5px;
-      background: #333;
+      background-color: #333;
       border-radius: 5px;
+    }
+    
+    #health-bar {
+      height: 20px;
+      background-color: #333;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    
+    #health-fill {
+      height: 100%;
+      background-color: #f00;
+      transition: width 0.3s;
+    }
+    
+    #mana-bar {
+      height: 15px;
+      background-color: #333;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    
+    #mana-fill {
+      height: 100%;
+      background-color: #00f;
+      transition: width 0.3s;
+    }
+    
+    #inventory {
+      margin-top: 20px;
+    }
+    
+    .inventory-item {
+      width: 40px;
+      height: 40px;
+      background-color: #444;
+      margin: 5px;
+      border-radius: 5px;
+      display: inline-block;
+      cursor: pointer;
+      position: relative;
+    }
+    
+    .inventory-item:hover {
+      background-color: #555;
+    }
+    
+    .inventory-item .tooltip {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #222;
+      padding: 5px;
+      border-radius: 5px;
+      white-space: nowrap;
+      display: none;
+    }
+    
+    .inventory-item:hover .tooltip {
+      display: block;
+    }
+    
+    #ability-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-top: 20px;
+    }
+    
+    .ability-button {
+      background-color: #444;
+      color: #fff;
+      border: none;
+      padding: 8px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    
+    .ability-button:hover {
+      background-color: #555;
+    }
+    
+    .ability-button:disabled {
+      background-color: #666;
+      cursor: not-allowed;
+    }
+    
+    #chat {
+      margin-top: 20px;
+    }
+    
+    #chat-messages {
+      height: 100px;
+      overflow-y: auto;
+      background-color: #333;
+      padding: 5px;
+      margin-bottom: 5px;
+      border-radius: 5px;
+    }
+    
+    #chat-input {
+      width: 100%;
+      padding: 8px;
+      background-color: #333;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 5px;
+    }
+    
+    #status {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #0f0;
+      color: #000;
+      padding: 10px;
+      border-radius: 5px;
+      font-weight: bold;
+      z-index: 1000;
+      display: none;
+    }
+    
+    #status.error {
+      background-color: #f00;
+      color: #fff;
     }
   </style>
 </head>
 <body>
-  <h1>Co-op Dungeon Crawler</h1>
-  
-  <div id="status" class="status disconnected">
-    Connecting to server...
-  </div>
-  
-  <div id="lobby">
-    <p>Select your class:</p>
-    <button onclick="selectClass('warrior')">Warrior</button>
-    <button onclick="selectClass('mage')">Mage</button>
-    <button onclick="selectClass('rogue')">Rogue</button>
-    
-    <div style="margin-top: 20px;">
-      <input type="text" id="room-id" placeholder="Room ID (leave blank to create)">
-      <br>
-      <button onclick="createRoom()">Create Room</button>
-      <button onclick="joinRoom()">Join Room</button>
-    </div>
-    
-    <div id="player-list" class="player-list"></div>
-  </div>
+  <div id="status">Connected to server!</div>
   
   <div id="game-container">
     <div id="game"></div>
+    <div id="ui-panel">
+      <div id="lobby">
+        <h1>Co-op Dungeon Crawler</h1>
+        <p>Select your class:</p>
+        <div id="class-select">
+          <div class="class-option" data-class="warrior">
+            <strong>Warrior</strong><br>
+            <small>High HP, Melee</small>
+          </div>
+          <div class="class-option" data-class="mage">
+            <strong>Mage</strong><br>
+            <small>Low HP, Spells</small>
+          </div>
+          <div class="class-option" data-class="rogue">
+            <strong>Rogue</strong><br>
+            <small>Fast, High Damage</small>
+          </div>
+        </div>
+        <div>
+          <input type="text" id="room-id" placeholder="Room ID (leave blank to create)">
+          <button id="join-btn">Join Room</button>
+          <button id="create-btn">Create Room</button>
+        </div>
+        <div id="player-list"></div>
+      </div>
+      
+      <div id="game-ui" style="display: none;">
+        <h2>Dungeon Crawler</h2>
+        <div id="health-bar">
+          <div id="health-fill" style="width: 100%;"></div>
+        </div>
+        <div id="mana-bar" style="display: none;">
+          <div id="mana-fill" style="width: 100%;"></div>
+        </div>
+        <div id="ability-buttons"></div>
+        <div id="inventory"></div>
+        <div id="chat">
+          <div id="chat-messages"></div>
+          <input type="text" id="chat-input" placeholder="Type a message...">
+        </div>
+      </div>
+    </div>
   </div>
   
-  <script>
-    // Socket.io connection (auto-connects to the same domain)
-    const socket = io();
-    let currentRoomId = null;
-    let playerClass = 'warrior';
-    
-    // Update connection status on the page
-    socket.on('connect', () => {
-      document.getElementById('status').textContent = '✅ Connected to server!';
-      document.getElementById('status').className = 'status connected';
-      console.log('Connected to Socket.io server!');
-    });
-    
-    socket.on('connect_error', (e) => {
-      document.getElementById('status').textContent = '❌ Connection failed: ' + e.message;
-      document.getElementById('status').className = 'status disconnected';
-      console.error('Connection error:', e);
-    });
-    
-    socket.on('disconnect', () => {
-      document.getElementById('status').textContent = '⚠️ Disconnected from server';
-      document.getElementById('status').className = 'status disconnected';
-    });
-    
-    // Room events
-    socket.on('roomCreated', (data) => {
-      currentRoomId = data.roomId;
-      document.getElementById('room-id').value = data.roomId;
-      document.getElementById('status').textContent = 'Room created! ID: ' + data.roomId;
-      document.getElementById('status').className = 'status connected';
-    });
-    
-    socket.on('roomJoined', (data) => {
-      currentRoomId = data.roomId;
-      document.getElementById('status').textContent = 'Joined room: ' + data.roomId;
-      document.getElementById('status').className = 'status connected';
-    });
-    
-    socket.on('playerJoined', (data) => {
-      const playerList = document.getElementById('player-list');
-      const playerDiv = document.createElement('div');
-      playerDiv.textContent = 'Player joined: ' + data.playerId.substring(0, 8) + ' (' + data.playerClass + ')';
-      playerList.appendChild(playerDiv);
-    });
-    
-    socket.on('playerLeft', (data) => {
-      const playerList = document.getElementById('player-list');
-      const playerDiv = document.createElement('div');
-      playerDiv.textContent = 'Player left: ' + data.playerId.substring(0, 8);
-      playerList.appendChild(playerDiv);
-    });
-    
-    socket.on('error', (data) => {
-      alert('Error: ' + data.message);
-    });
-    
-    // Class selection
-    function selectClass(className) {
-      playerClass = className;
-      document.getElementById('status').textContent = 'Selected: ' + className;
-      document.getElementById('status').className = 'status connected';
-    }
-    
-    // Create a new room
-    function createRoom() {
-      socket.emit('createRoom');
-    }
-    
-    // Join an existing room
-    function joinRoom() {
-      const roomId = document.getElementById('room-id').value;
-      if (!roomId) {
-        alert('Please enter a Room ID or create a new room.');
-        return;
-      }
-      socket.emit('joinRoom', { roomId: roomId, playerClass: playerClass });
-    }
-  </script>
+  <script src="/game.js"></script>
 </body>
 </html>

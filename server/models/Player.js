@@ -29,7 +29,7 @@ const ABILITY_EFFECTS = {
   fireball: { damage: 25, manaCost: 20 },
   heal: { healAmount: 30, manaCost: 15 },
   backstab: { damage: 25, manaCost: 0 },
-  dodge: { damage: 0, manaCost: 10 } // Evades next attack
+  dodge: { damage: 0, manaCost: 10 }
 };
 
 class Player {
