@@ -19,7 +19,26 @@ const config = {
 };
 
 // Game variables
-let game = new Phaser.Game(config);
+let game;
+try {
+  game = new Phaser.Game(config);
+} catch (e) {
+  // Show error on screen if Phaser fails to initialize
+  const errorDiv = document.createElement('div');
+  errorDiv.style.position = 'fixed';
+  errorDiv.style.top = '50%';
+  errorDiv.style.left = '50%';
+  errorDiv.style.transform = 'translate(-50%, -50%)';
+  errorDiv.style.color = 'red';
+  errorDiv.style.backgroundColor = 'white';
+  errorDiv.style.padding = '20px';
+  errorDiv.style.zIndex = '9999';
+  errorDiv.style.fontSize = '20px';
+  errorDiv.style.textAlign = 'center';
+  errorDiv.innerHTML = '<strong>Phaser Error:</strong><br>' + e.message;
+  document.body.appendChild(errorDiv);
+  throw e;
+}
 let socket;
 let currentRoomId = window.currentRoomId || null;
 let player;
@@ -149,7 +168,8 @@ function connectToServer() {
 
 // Initialize game with server data
 function initializeGame(data) {
-  // Clear existing game objects
+  try {
+    // Clear existing game objects
   if (dungeonLayer) {
     dungeonLayer.destroy();
   }
@@ -196,7 +216,21 @@ function initializeGame(data) {
   updateManaBar();
   updateInventory();
   createAbilityButtons();
-}
+  } catch (e) {
+    const errorDiv = document.createElement('div');
+    errorDiv.style.position = 'fixed';
+    errorDiv.style.top = '50%';
+    errorDiv.style.left = '50%';
+    errorDiv.style.transform = 'translate(-50%, -50%)';
+    errorDiv.style.color = 'red';
+    errorDiv.style.backgroundColor = 'white';
+    errorDiv.style.padding = '20px';
+    errorDiv.style.zIndex = '9999';
+    errorDiv.style.fontSize = '20px';
+    errorDiv.style.textAlign = 'center';
+    errorDiv.innerHTML = '<strong>Init Error:</strong><br>' + e.message + '<br>' + e.stack;
+    document.body.appendChild(errorDiv);
+  }
 
 // Create dungeon map from server data
 function createDungeonMap(dungeon) {
