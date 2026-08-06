@@ -369,6 +369,9 @@
       document.getElementById('lobby').style.display = 'none';
       document.getElementById('game-ui').style.display = 'block';
       
+      // Pass roomId to game.js
+      window.currentRoomId = currentRoomId;
+      
       // Load Phaser game
       const script = document.createElement('script');
       script.src = '/game.js';
